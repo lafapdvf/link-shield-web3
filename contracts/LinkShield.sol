@@ -8,11 +8,27 @@ contract LinkShield {
         string url;
         address owner;
         uint256 fee;
+        uint256 timestamp;
+        uint256 paymentsCount;
     }
 
+    address public owner;
     uint256 public commission = 1;
     mapping(string => Link) private links;
     mapping(string => mapping(address => bool)) public hasAccess;
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the contract owner can perform this action.");
+        _;
+    }
+
+    function setCommission(uint256 _commission) public onlyOwner {
+        commission = _commission;
+    }
 
     function addLink(string calldata url, string calldata linkId, uint256 fee) public {
         Link memory link = links[linkId];
@@ -22,6 +38,7 @@ contract LinkShield {
         link.url = url;
         link.fee = fee;
         link.owner = msg.sender;
+        link.timestamp = block.timestamp;
 
         links[linkId] = link;
         hasAccess[linkId][msg.sender] = true;
@@ -35,6 +52,7 @@ contract LinkShield {
 
         hasAccess[linkId][msg.sender] = true;
         payable(link.owner).transfer(msg.value - commission);
+        links[linkId].paymentsCount++;
     }
 
     function getLink(string calldata linkId) public view returns (Link memory) {
@@ -45,5 +63,12 @@ contract LinkShield {
 
         return link;
     }
+
+    function deleteLink(string calldata linkId) public onlyOwner {
+        require(links[linkId].owner != address(0), "Link does not exist.");
+    
+        delete links[linkId];
+    }
+
 
 }
